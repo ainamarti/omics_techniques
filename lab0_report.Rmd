@@ -1,0 +1,255 @@
+---
+title: "**LAB0: Practical Exercise on ExpressionSets**"
+subtitle: "The goal of this task is to practice the basic elements of Bioconductor and Rmarkdown"
+author: "Aina Martí Aranda"
+date: "12/5/2020"
+output:
+  html_document:
+      theme: lumen
+      css: https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.css
+      self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(knitr)
+opts_chunk$set(
+concordance=FALSE, echo=TRUE, cache=TRUE, warning=FALSE, error=FALSE, message=FALSE)
+```
+<div style="background-color: #cbcdea; 1px; height:3px " ></div><br>
+
+<div style = "background-color:#cbcdea">
+### <i class="fa fa-cog"></i>  INTRODUCTION<br>
+
+The goal of this task is to practice the basic elements of Bioconductor and Rmarkdown and get familiar with ExpressionSets. I have selected an study from the Gene Expression Omnibus Database with accession code GSE148350. It studies the gene expression changes of microglia transcriptome in a rat model of ischemic stroke.
+Here, gene expression changes are analyzed from 3 to 14 days after stroke onset and compared the activation pattern between 3-month and 12-month old brains.
+
+In this practical, we are going to analyze the different samples using the geoQUERY package to download the data in a single instruction.
+ 
+This report can be found in the following repository:
+https://github.com/ainamarti/omics_techniques
+
+</div>
+
+### <i class="fa fa-cog"></i>  STUDY DESCRIPTION<br>
+<div style="background-color: #cbcdea; 1px; height:3px " ></div><br>
+
+This is the link to the GEO entry. Here you will find all the information related to the study together with the supplementary data with the information for all the samples:
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE148350
+
+This study was made public on April 24, 2020.    
+<ul class="fa-ul">
+**Title**:	Microglia transcriptome in a rat model of ischemic stroke  
+**Organism**:	Rattus norvegicus  
+**Experiment type**	Expression profiling by array  
+**Summary**:	Microglia are key regulators of inflammatory response after stroke and brain injury. Here we profiled the microglia transcriptome isolated from a spontaneously hypertensive rat model of focal cerebral ischemia.
+We identified an extensive and persistent upregulation of anti-inflammatory M2-like patterns after stroke and a mild up-regulation of pro-inflammatory M1-like patterns at later stage. We also found that younger brains showed larger microglial response than middle aged brains. Moreover, beyond the standard M1/M2 dichotomy, a wide spectrum of novel microglial polarization states was activated in response to stroke, particularly the phenotypes related to Tlr2 and dietary fatty acids stimulation.  
+**Contributor(s)**:	Deng W, Mandeville E, Terasaki Y, Li W, Ning M, Lo EH, Xing C  
+**Platforms**: GPL6247	[RaGene-1_0-st] Affymetrix Rat Gene 1.0 ST Array [transcript (gene) version]  
+</ul>
+
+### <i class="fa fa-cog"></i>  EXPERIMENTAL DESIGN USED<br>
+<div style="background-color: #cbcdea; 1px; height:3px " ></div><br>
+In this study, 30 different samples were analyzed. There are 10 different groups and 3 samples for each of them.
+They are divided regarding the age in months (3 or 12 months), the controls (Sham) vs timepoint for the non-control ones (3 or 14 days), and the hemisphere from where the microglia is isolated, which also applies only for the non-control cases.  
+The study analyzes microglial gene expression change from 3 to 14 days after stroke onset and compares the activation pattern between 3-month and 12-month old brains.
+Therefore, we have 3 factors that can act as a source of variation for the expression values results; age, condition/timepoint, and hemisphere. This leads us with 10 groups and 3 samples for each of them. So, overall we have 30 samples.
+
+The groups that have "Sham" as condition, means that they are control groups.
+
+Those are the different groups and their properties:  
+
+| Group   | age | Condition/timepoint | Hemisphere |
+|----------|------|------|-----|-----|
+| Group 1 | 3 months | Sham |   |   |
+| Group 2 | 3 months | 3 days after stroke | contralateral  |
+| Group 3 | 3 months | 3 days after stroke | ipsilateral  |
+| Group 4 | 3 months | 14 days after stroke | contralateral |
+| Group 5 | 3 months | 14 days after stroke | ipsilateral |
+| Group 6 | 12 months | Sham |   |   |
+| Group 7 | 12 months | 3 days after stroke | contralateral  |
+| Group 8 | 12 months | 3 days after stroke | ipsilateral  |
+| Group 9 | 12 months | 14 days after stroke | contralateral |
+| Group 10 | 12 months | 14 days after stroke | ipsilateral |
+
+Then, samples 1 to 3 will be of group 1, samples 4 to 6 will be from group 2 and so on...
+
+### <i class="fa fa-cog"></i> DATA ANALYSIS
+<div style="background-color: #cbcdea; 1px; height:3px " ></div><br>
+We can directly download the ExpressionSet using the ``getGEO()`` function. This function will take the matrix from the entry in the GEO database, and it will generate an ExpressionSet out of it.
+
+```{r download, results=FALSE}
+library(GEOquery)
+exp_set <- getGEO("GSE148350")[[1]]
+```
+
+The data downloaded is as follows. It shows the different fields of the ExpressionSet object.
+
+```{r show data, echo=FALSE}
+show(exp_set)
+```
+We can see that this study has generated 30 different samples, which represent the columns in the matrix, and there are 29214 features for each of them, which represent the rows. This can be known by executing the function ``dim(exp_set))``
+
+```{r dim, echo=FALSE}
+dim(exp_set)
+```
+Then, to obtain the different names of the samples we can run the ``colnames()`` function
+```{r }
+colnames(exp_set)
+```
+Each of those samples have different properties and belong to different groups depending on those features. We can see them by using the function ``pData(phenoData(exp_set))``
+In this case, I am only selecting the most important columns, but we can also display the entire data. This is showing the same data that is summarized in the "Experimental Design used" section 
+```{r}
+head(pData(phenoData(exp_set))[c(1,11,12,13,14)])
+```
+
+
+Now, with this data, we can perform some different analysis to check the consistency of the results.
+The first thing we can do is to do some numerical summaries of the data. Then, we can use some plots to represent graphically the data stored in the expressionSet, and finally we can do a principal component analysis.
+
+##### Numerical summaries
+
+This summaries will be about the expression data, then we first extract it from the whole ExpressionSet object. We will save the expression data separated in a new variable by using the function ``exprs()``
+
+```{r expressionData, results=FALSE}
+expression_data <- exprs(exp_set)
+```
+
+Then we can do the summary of this data by using the function ``summary()``. This will tell us some statistical parameters for the data of each sample.
+```{r summary1}
+summary(expression_data)
+```
+
+As we can see, this is the summary for each of the samples, and it shows the minimum value of expression as well as the median, mean, maximum, and other statistical parameters. This way we can compare the levels of expression of each of them.  
+We can do the same for only one of the samples by selecting the corresponding column. Here is an example of the first sample:
+
+```{r summary2}
+summary(expression_data[,1])
+```
+
+As we can see, the median and the mean values are different, which means that the shape of the value's distribution will be skewed. We will see a plot of that distribution later.
+In order to be able to compare the information between samples, it is very important to work with normalized values, so we will need to apply some normalizing technique to be able to compare the expression values.
+
+It may be useful also to obtain the same information for the different genes, not only for the different samples, to see which ones are highly expressed and which are expressed equally.
+
+
+##### Plots
+
+It is a bit difficult to find differences in those values by only seing them printed like this. Therefore, we can do some plots to show in a graphical way the information stored in the Expressionset.  
+
+First, we can display some histograms to show the distribution of expression values in the whole set of data. We can do the same for only one gene or one sample.
+```{r}
+hist(expression_data, main="GSE148350", col='mediumpurple1', breaks=50)
+```
+
+As we can see, the distribution is positively skewed, whcih means that the mean is higher than the median. Therefore we will need to normalize the values to compare the different samples between them. We can do it by applying the logarithm:
+
+```{r}
+hist(log(expression_data), main="GSE148350", col='mediumpurple1', breaks=50)
+```
+
+Now the distribution is more symetric.
+
+Now we can show the different boxplots for all the samples in the study. This plot will show the same information displayed with the ``summary()`` function (maximum, minimum, mean, etc). We can also display the barplot of only one of the samples or one of the genes running the function ``boxplot(expression_data[1,])`` for the gene, or ``boxplot(expression_data[,1])`` for the sample.
+The boxplots are colored differently according to the group those samples belong to:
+
+```{r colors, echo=FALSE}
+colors=c(rep('mediumpurple1', 3), rep('plum', 3), rep("pink", 3), rep("beige", 3), rep("salmon", 3), rep("lightpink", 3), rep("aquamarine", 3), rep("darkseagreen1", 3), rep("darkturquoise", 3) , rep("darkslategray1", 3))
+```
+
+
+```{r}
+boxplot(expression_data, main="GSE148350", col=colors, outline=FALSE, las=2)
+```
+
+
+As well as before, we may need to normalize the values prior to comparing the different samples between them.
+```{r}
+boxplot(log(expression_data), main="GSE148350", col=colors, outline=FALSE, las=2)
+```
+
+
+We can also do a barplot of the expression of one gen in each of the samples. This way we can easily see if there are differences in the expression of that specific gene among samples. Here is the example of the expression for the first gene.
+
+```{r}
+barplot(expression_data[1,], col=colors, las=2)
+```
+
+
+This is the expression of one gene in each of the samples. As we can see, in this case the levels of expressions are the same.
+
+##### Principal Component Analysis
+Finally, we can do a principal component analysis over the data.
+
+```{r age, echo=FALSE}
+age <- c("3 months","3 months", "3 months", "3 months", "3 months", "3 months","3 months", "3 months", "3 months", "3 months", "3 months","3 months", "3 months", "3 months", "3 months", "12 months", "12 months", "12 months", "12 months", "12 months", "12 months", "12 months", "12 months", "12 months", "12 months", "12 months", "12 months", "12 months", "12 months", "12 months" )
+```
+
+
+```{r}
+pcs <- prcomp(expression_data)
+names(pcs)
+barplot(pcs$sdev, col="mediumpurple1")
+
+plot(pcs$rotation[,1], pcs$rotation[,2], col="mediumpurple", main="Representation of first two principal components")
+text(pcs$rotation[,1], pcs$rotation[,2], age, cex=0.7)
+```
+
+
+Now we can do some operations to know which are the most variable genes. We will sort them and print only the first ones.
+```{r variability}
+allgenes <- rownames(expression_data)
+variab <- apply(expression_data, 1, sd)
+orderedGenes <- allgenes[order(variab, decreasing=TRUE)]
+head(variab[order(variab, decreasing=TRUE)])
+```
+
+Now we can inspect those genes. We will display the barplots that show the level of expression of each gene in each of the samples. They will be colored differently depending on the group they belong to.
+
+Remember that the groups are the following ones:
+
+| Group   | age | Condition/timepoint | Hemisphere |
+|----------|------|------|-----|-----|
+| Group 1 | 3 months | Sham |   |   |
+| Group 2 | 3 months | 3 days after stroke | contralateral  |
+| Group 3 | 3 months | 3 days after stroke | ipsilateral  |
+| Group 4 | 3 months | 14 days after stroke | contralateral |
+| Group 5 | 3 months | 14 days after stroke | ipsilateral |
+| Group 6 | 12 months | Sham |   |   |
+| Group 7 | 12 months | 3 days after stroke | contralateral  |
+| Group 8 | 12 months | 3 days after stroke | ipsilateral  |
+| Group 9 | 12 months | 14 days after stroke | contralateral |
+| Group 10 | 12 months | 14 days after stroke | ipsilateral |
+
+
+```{r, echo=FALSE}
+barplot(expression_data["10940654",], col=colors, las=2, main="gene 10940654")
+```
+
+
+```{r, echo=FALSE}
+barplot(log(expression_data["10855449",]), col=colors, las=2, main="gene 10855449")
+```
+
+```{r, echo=FALSE}
+barplot(expression_data["10779673",], col=colors, las=2, main="gene 10779673")
+```
+
+
+```{r, echo=FALSE}
+barplot(expression_data["10749818",], col=colors, las=2, main="gene 10749818")
+```
+
+
+```{r, echo=FALSE}
+barplot(expression_data["10817183",], col=colors, las=2, main="gene 10817183")
+```
+
+
+```{r, echo=FALSE}
+barplot(expression_data["10712171",], col=colors, las=2, main="gene 10712171")
+```
+
+We can see, that those genes are up-regulated after stroke, and in some of them, the response is higher in younger individuas.
+We can also see that the expression levels are higher in the ipsilateral hemisphere.
+
