@@ -27,7 +27,7 @@ Here, gene expression changes are analyzed from 3 to 14 days after stroke onset 
 In this practical, we are going to analyze the different samples using the geoQUERY package to download the data in a single instruction.
  
 This report can be found in the following repository:
-https://github.com/ainamarti/omics_techniques
+https://github.com/ainamarti/omics_techniques/tree/master/lab0
 
 </div>
 
