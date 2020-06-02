@@ -1,0 +1,85 @@
+---
+title: "Exercices in linear models and experimental design GSE136043"
+author: "Aina Martí"
+output:
+  html_document:
+    theme: united
+    toc: yes
+  pdf_document:
+    toc: no
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width = 12, fig.height = 8, cache = FALSE,
+                      echo = FALSE, warning = FALSE, message = FALSE)
+```
+# Introduction
+
+These exercises describe experimental situations that have been studied using some omics technology like microarrays.
+I have changed my study from previous exercises because the previous one had too many groups and variables to assess, this one is simpler and fits better the requirements for the study.  
+
+# Comparison between tumor and non-tumor tissues
+
+This case study is based on a paer published in  https://pubmed.ncbi.nlm.nih.gov/32194819/ whose data are available in GEO as series GSE136043 series on the following link
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE136043
+
+
+The researchers investigated two types of tissues:
+In the study presented here, fresh lung cancer tissue specimens and non-tumor lung tissue specimens were collected immediately after surgical resection.
+
+Now we are going to do the analysis using a linear model approach:
+
+1. Identify the experimental factors and their levels.
+2. Write down the design matrix associated with this study design.
+3. Build the contrast matrix needed to compare each tumor type with the oher two, that is:
+
+    1. "TUMOR" vs “NON-TUMOR”
+    
+
+```{r readTargets, echo=TRUE}
+require (limma)
+library(GEOquery)
+exp_set <- getGEO("GSE136043")[[1]]
+```
+
+
+```{r designMatrix, echo=TRUE}
+design<-matrix(
+  c(1,1,1,1,1,0,0,0,0,0,
+    0,0,0,0,0,1,1,1,1,1),
+  nrow=10,byrow=F)
+design2 <-model.matrix(~ 0+colnames(exp_set))
+colnames(design)<-c("T", "N")
+rownames(design) <- colnames(exp_set)
+print(design)
+```
+
+```{r contrastsMatrix, echo=TRUE}
+cont.matrix <- makeContrasts (
+  TvsN = T-N,
+  levels=design)
+```
+
+```{r fitModel, echo=TRUE}
+require(limma)
+dataMatrix <- exprs(exp_set)
+fit<-lmFit(dataMatrix, design)
+fit.main<-contrasts.fit(fit, cont.matrix)
+fit.main<-eBayes(fit.main)
+```
+
+```{r extractResults, echo=TRUE}
+topTab_TvsN <- topTable (fit.main, number=nrow(fit.main), coef="TvsN", adjust="fdr"); head(topTab_TvsN)
+```
+
+```{r showResults, echo=TRUE}
+volcanoplot(fit.main, coef="TvsN", highlight=10)
+```
+`
+
+
+
+
+
+
+
