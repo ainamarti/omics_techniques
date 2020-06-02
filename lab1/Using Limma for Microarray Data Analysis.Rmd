@@ -14,7 +14,7 @@ knitr::opts_chunk$set(fig.width = 12, fig.height = 8, cache = FALSE,
                       echo = FALSE, warning = FALSE, message = FALSE)
 ```
 # Introduction
-
+This report can be found in the github repository with link: https://github.com/ainamarti/omics_techniques  
 These exercises describe experimental situations that have been studied using some omics technology like microarrays.
 I have changed my study from previous exercises because the previous one had too many groups and variables to assess, this one is simpler and fits better the requirements for the study.  
 
