@@ -1,47 +1,153 @@
 ---
 title: "Exercices in linear models and experimental design GSE136043"
 author: "Aina Martí"
+date: "4/6/2020"
 output:
   html_document:
-    theme: united
-    toc: yes
-  pdf_document:
-    toc: no
+      theme: lumen
+      css: https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/all.css
+      self_contained: yes
+      toc: yes
 ---
 
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(fig.width = 12, fig.height = 8, cache = FALSE,
                       echo = FALSE, warning = FALSE, message = FALSE)
 ```
-# Introduction
+
+<div style = "background-color:#BBE5F5 ">
+### <i class="fa fa-cog"></i>  Introduction<br>
 This report can be found in the github repository with link: https://github.com/ainamarti/omics_techniques  
-These exercises describe experimental situations that have been studied using some omics technology like microarrays.
+
+The aim of this project is to combine the previous exercises into a final one where we will add the detection of differentially expressed genes. Here we will make a general description of the study that generated the data and we will build the design matrix and contrast matrix to finally perform an analysis using a linear model approach.
 I have changed my study from previous exercises because the previous one had too many groups and variables to assess, this one is simpler and fits better the requirements for the study.  
+</div>
 
-# Comparison between tumor and non-tumor tissues
 
-This case study is based on a paer published in  https://pubmed.ncbi.nlm.nih.gov/32194819/ whose data are available in GEO as series GSE136043 series on the following link
+### <i class="fa fa-cog"></i>  Study description<br>
+<div style="background-color: #BBE5F5 ; 1px; height:3px " ></div><br>
+In this case, the study is based on a paer published in  https://pubmed.ncbi.nlm.nih.gov/32194819/ whose data are available in GEO as series GSE136043 series on the following link:  
 https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE136043
 
+It studies the gene expression changes of non-tumor lung tissues and lung cancer tissues. The tissue samples used in this study were collected immediately after surgical resection.
 
-The researchers investigated two types of tissues:
-In the study presented here, fresh lung cancer tissue specimens and non-tumor lung tissue specimens were collected immediately after surgical resection.
+This study was made public on Apr 10, 2020  
+<ul class="fa-ul">
+**Title**:	mRNAs microarray from 5 fresh lung cancer tissues and 5 fresh non-tumor tissues.  
+**Organism**:	Homo sapiens  
+**Experiment type**	Expression profiling by array    
+**Summary**:	We performed mRNAss microarray to analyze the differential mRNAs expression profiles according to the recommended protocols.  
+**Overall design**: In the study presented here, fresh lung cancer tissue specimens and non-tumor lung tissue specimens were collected immediately after surgical resection. mRNAs microarray was performed according to the manufacturer’s guideline.  
+**Contributor(s)**:	Jiang N, Ke Z  
+**Platforms**: 	GPL13497	Agilent-026652 Whole Human Genome Microarray 4x44K v2 (Probe Name version)  
+</ul>  
 
-Now we are going to do the analysis using a linear model approach:
+In this study, 10 different samples were analyzed. There are two different groups depending on the type of tissue; tumor or non-tumor lung tissue.
+
+The study analyzes the gene expression change between those two groups to identify differentially expressed genes that could play a key role in this type of cancer.
+Therefore, we have one factor with two levels, whcih can act as a source of variation for the expression values results. This leads us with two groups and 5 samples for each of them. So, overall we have 10 samples.
+
+Those are the different samples and their property:  
+
+| Sample   | Non-tumor/tumor | 
+|----------|------|
+| Sample 1 | N |
+| Sample 2 | N |
+| Sample 3 | N |
+| Sample 4 | N |
+| Sample 5 | N |
+| Sample 6 | T |
+| Sample 7 | T |
+| Sample 8 | T |
+| Sample 9 | T |
+| Sample 10 | T |
+
+Then, samples 1 to 5 will be of group 1, and samples 6 to 10 will be from group 2.
+
+We can directly download the ExpressionSet using the ``getGEO()`` function. This function will take the matrix from the entry in the GEO database, and it will generate an ExpressionSet out of it.
+
+```{r download, results=FALSE}
+library(GEOquery)
+exp_set <- getGEO("GSE136043")[[1]]
+```
+
+The data downloaded is as follows. It shows the different fields of the ExpressionSet object.
+
+```{r show data, echo=FALSE}
+show(exp_set)
+```
+This study has generated 10 different samples, which represent the columns in the matrix, and there are 29214 features for each of them, which represent the rows. This can be known by executing the function ``dim(exp_set))``
+
+```{r dim, echo=FALSE}
+dim(exp_set)
+```
+Then, to obtain the different names of the samples we can run the ``colnames()`` function
+```{r }
+colnames(exp_set)
+```
+
+Each of those samples have different properties and belong to different groups depending on those features. We can see them by using the function ``pData(phenoData(exp_set))``
+In this case, I am only selecting the most important columns, but we can also display the entire data.
+
+```{r}
+head(pData(phenoData(exp_set))[c(10,13,14)])
+```
+
+
+To inspect this data we can first do some numerical summaries and plots.
+
+This summaries will be about the expression data, then we first extract it from the whole ExpressionSet object. We will save the expression data separated in a new variable by using the function ``exprs()``
+
+```{r expressionData, results=FALSE}
+expression_data <- exprs(exp_set)
+```
+
+Then we can do the summary of this data by using the function ``summary()``. This will tell us some statistical parameters for the data of each sample.
+```{r summary1}
+summary(expression_data)
+```
+
+As we can see, this is the summary for each of the samples, and it shows the minimum value of expression as well as the median, mean, maximum, and other statistical parameters. This way we can compare the levels of expression of each of them.  
+
+As we can see, the median and the mean values are different, which means that the shape of the value's distribution will be skewed:
+
+```{r}
+hist(expression_data, main="GSE136043", col='cadetblue1', breaks=50)
+```
+
+Now we can show the different boxplots for all the samples in the study. This plot will show the same information displayed with the ``summary()`` function (maximum, minimum, mean, etc). We can also display the barplot of only one of the samples or one of the genes running the function ``boxplot(expression_data[1,])`` for the gene, or ``boxplot(expression_data[,1])`` for the sample.
+The boxplots are colored differently according to the group those samples belong to:
+
+```{r colors, echo=FALSE}
+colors=c(rep('cadetblue1', 5), rep('cadetblue3', 5))
+```
+
+
+```{r}
+boxplot(expression_data, main="GSE136043", col=colors, outline=FALSE, las=2)
+```
+
+
+We may need to normalize the values prior to comparing the different samples between them.
+```{r}
+boxplot(log(expression_data), main="GSE136043", col=colors, outline=FALSE, las=2)
+```
+
+
+
+### <i class="fa fa-cog"></i> Comparison between tumor and non-tumor tissues<br>
+<div style="background-color: #BBE5F5 ; 1px; height:3px " ></div><br>
+Now we are going to do the analysis using a linear model approach and following those steps:
 
 1. Identify the experimental factors and their levels.
 2. Write down the design matrix associated with this study design.
 3. Build the contrast matrix needed to compare each tumor type with the oher two, that is:
 
     1. "TUMOR" vs “NON-TUMOR”
-    
 
-```{r readTargets, echo=TRUE}
-require (limma)
-library(GEOquery)
-exp_set <- getGEO("GSE136043")[[1]]
-```
 
+The first thing we need to do is to will build the design matrix with the following code. We have one factor with two levels. The first 5 samples belong to the first group and the last 5 samples belong to the second one.  
+The column names (T and N) stand for tumor and non-tumor respectively.
 
 ```{r designMatrix, echo=TRUE}
 design<-matrix(
@@ -54,14 +160,18 @@ rownames(design) <- colnames(exp_set)
 print(design)
 ```
 
+Now we can build the comparison matrix. This will simply compare the two types of tissues, whcih means comparing the first group to the second one. We can do this by using the ``makeContrast()`` function and using the column names of the design matrix.
+
 ```{r contrastsMatrix, echo=TRUE}
+require(limma)
 cont.matrix <- makeContrasts (
   TvsN = T-N,
   levels=design)
 ```
 
+Once done those two matrices, we can proceed to use the ``limma`` package to fit a linear model. We will estimate the contrasts and generate a "topTable" and a "volcanoPlot" for the comparison (T vs N).
+
 ```{r fitModel, echo=TRUE}
-require(limma)
 dataMatrix <- exprs(exp_set)
 fit<-lmFit(dataMatrix, design)
 fit.main<-contrasts.fit(fit, cont.matrix)
